@@ -15,7 +15,7 @@ HEIGHT = 900
 STAGE_WIDTH = 10000  # ステージの横幅
 TREE_BOTTOM = 100
 WALL_NUM = 15  # 木の数
-trees = pg.sprite.Group() # 木のリスト
+screen = None
 
 class Wall(pg.sprite.Sprite):
     """
@@ -59,7 +59,7 @@ class Start_menu:
         フォント、メニュータイトルの表示
         """
         self.font = pg.font.Font("fonts/onryou.TTF", 100)
-        self.menu_title = self.font.render("学長から見つかるな！", True, (255, 255, 255))
+        self.menu_title = self.font.render("学長が転んだ", True, (255, 255, 255))
         
     def button(self, screen: pg.Surface, num:int):
         """
@@ -114,10 +114,13 @@ class Enemy(pg.sprite.Sprite):
         if self.rect.right <= 0:
             self.kill()
         
-
-def main():
+def displayInit():
+    global screen
     pg.display.set_caption("学長が転んだ")
     screen = pg.display.set_mode((WITDH, HEIGHT))
+
+def main():
+    global screen
     # ここからメニュー画面
     start_menu = Start_menu()
     game_state = "menu_start"
@@ -136,7 +139,7 @@ def main():
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE and game_state == "menu_start":
                 game_state = "runnnig"
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE and game_state == "menu_end":    
-                return
+                return "end"
         
 
 
@@ -148,7 +151,7 @@ def main():
     character = ch.Character([200, 720])
     bg = background()
     emys = pg.sprite.Group()
-
+    trees = pg.sprite.Group() # 木のグループ
 
     tmr = 0
     clock = pg.time.Clock()
@@ -160,7 +163,7 @@ def main():
             emys.add(Enemy())
         key_lst = pg.key.get_pressed()
         for event in pg.event.get():
-            if event.type == pg.QUIT: return
+            if event.type == pg.QUIT: return "end"
             
 
         mv = character.calc_mv(key_lst, bg)
@@ -186,20 +189,18 @@ def main():
             character.update(3, screen)            
             pg.display.update()
             time.sleep(2)
-            return
+            return "clear"
 
         screen.blit(character.image, character.rect) # キャラクター描画
         # キャラクターと障害物の衝突判定
         if len(pg.sprite.spritecollide(character, emys, True)) != 0:
-            character.update(2, screen)
-            pg.display.update()
-            time.sleep(2)
-            return
+            game_state = "game_over"
         else:
             character.update(1, screen)
         
-        emys.update(mv)
-        emys.draw(screen)
+        if len(emys) != 0:
+            emys.update(mv)
+            emys.draw(screen)
 
         # ゲームオーバー判定
         if game_state == "game_over":
@@ -208,12 +209,10 @@ def main():
             txt_rect = txt.get_rect()
             txt_rect.center = (WITDH / 2, HEIGHT / 2)
             screen.blit(txt, txt_rect)
+            character.update(2, screen)
             pg.display.update()
             time.sleep(2)
-            return
-
-        
-
+            return "damage"
         
         pg.display.update()
         tmr += 1
@@ -221,6 +220,9 @@ def main():
 
 if __name__ == "__main__":
     pg.init()
-    main()
+    displayInit()
+    status = "first"
+    while status != "end":
+        status = main()
     pg.quit()
     sys.exit()
