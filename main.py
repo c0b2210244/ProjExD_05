@@ -3,11 +3,10 @@ import random
 import pygame as pg
 import random
 import time
+import math
 
 import character as ch
 from background import background
-
-
 from Gakutyou import Gakutyou # 学長クラスのインポート
 
 WITDH = 1600
@@ -95,24 +94,24 @@ class Enemy(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = WITDH + 100, HEIGHT / 4
         self.vy = +40
-        self.ay = +1
+        self.ay = +1.0
         self.vx = -8
+        self.timer = 0
 
-
-    def update(self, mv_value):
+    def update(self, mv_value, timeDeray):
         """
         お魚が地面ではねるところ
         地面の座標(マージ前は750と仮定)に到達するまで等加速し、地面で速度を反転
         引数screen：画面Surface
         """
-        if self.rect.centery >= 750:
-            self.vy = -40
-        self.vy += self.ay
-        #self.rect.centerx = Character.calc_mv()   スクロールに合わせたx座標の移動(マージ後に調整)
-        self.rect.centerx += self.vx + mv_value
-        self.rect.centery += self.vy
+        # if self.rect.centery >= 750:
+        #     self.vy = -40 * timeDeray
+        # self.vy += self.ay * timeDeray
+        self.timer += self.vx * timeDeray
+        self.rect.centerx += self.vx * timeDeray + mv_value
+        self.rect.centery = -abs(math.sin(self.timer / 200 * (timeDeray*2))) * 700 + 800
         if self.rect.right <= 0:
-            self.kill()
+            self.kill() #画面外に出たら自身をkill
         
 def displayInit():
     global screen
@@ -120,7 +119,7 @@ def displayInit():
     screen = pg.display.set_mode((WITDH, HEIGHT))
 
 def main():
-    global screen
+    global screen, recentTime
     # ここからメニュー画面
     start_menu = Start_menu()
     game_state = "menu_start"
@@ -129,7 +128,6 @@ def main():
         pg.display.update()
         key_lst = pg.key.get_pressed()
         for event in pg.event.get():
-             
             if (event.type == pg.KEYDOWN and event.key == pg.K_RIGHT):#右キーを押下で設定画面に移れる状態にする
                 start_menu.button(screen, 1)
                 game_state = "menu_end"
@@ -141,9 +139,6 @@ def main():
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE and game_state == "menu_end":    
                 return "end"
         
-
-
-
     # ここからゲームスタート
     bg_image = pg.transform.rotozoom(pg.image.load("images/sky_img.png"), 0, 1.0)
 
@@ -155,6 +150,7 @@ def main():
 
     tmr = 0
     clock = pg.time.Clock()
+    clock.get_time()
     for i in range(WALL_NUM):  # WALL_NUMの分だけ繰り返す
         trees.add(Wall(screen))  # 木の情報を追加
 
@@ -163,10 +159,11 @@ def main():
             emys.add(Enemy())
         key_lst = pg.key.get_pressed()
         for event in pg.event.get():
-            if event.type == pg.QUIT: return "end"
+            if event.type == pg.QUIT: 
+                return "end"
             
-
-        mv = character.calc_mv(key_lst, bg)
+        timeDeray = max(clock.tick(50), 100) / 100
+        mv = character.calc_mv(key_lst, bg) * timeDeray
         bg.update(-mv)
         screen.blit(bg.image,bg.rect)
 
@@ -199,7 +196,7 @@ def main():
             character.update(1, screen)
         
         if len(emys) != 0:
-            emys.update(mv)
+            emys.update(mv, timeDeray)
             emys.draw(screen)
 
         # ゲームオーバー判定
@@ -216,7 +213,7 @@ def main():
         
         pg.display.update()
         tmr += 1
-        clock.tick(50)
+        
 
 if __name__ == "__main__":
     pg.init()
