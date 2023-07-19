@@ -45,7 +45,7 @@ class Gakutyou(pg.sprite.Sprite):
         self.attackTimer = -1 # 攻撃時間を設定（攻撃時以外は-1）
         self.isReady = False # 攻撃中かどうか
 
-    def update(self):
+    def update(self, timeDeray):
         """
         update関数のオーバーライド\n
         毎フレーム呼び出してください
@@ -56,21 +56,21 @@ class Gakutyou(pg.sprite.Sprite):
             self.isReady = True
             self.image = self.images[50]
         else:
-            self.timer += 1
+            self.timer += 1 * timeDeray
             self.image = self.images[int(self.timer * ((self.timer // 120 + 1) ** 2)) % 120] # タイマーに応じて画像を変更
             if int(self.timer * ((self.timer // 120 + 1) ** 2)) % 120 <= 10:
                 pg.mixer.init() # 目が光る効果音を再生
                 pg.mixer.music.load("sounds/pika.mp3")
                 pg.mixer.music.play(1)
         
-    def get_isReady(self):
+    def get_isReady(self, timeDeray):
         """
         クールタイムが終わったかをBool型で返す関数、Trueの時呼び出されると一定時間Trueを返し続ける\n
-        引数：無し\n
+        引数：遅延による影響（timeDeray）\n
         戻り値：True(攻撃できるとき) or False(攻撃できないとき)
         """
         if self.attackTimer >= 0:
-            self.attackTimer -= 1 # attackTimerが設定されている間は1ずつ減算
+            self.attackTimer -= 1 * timeDeray # attackTimerが設定されている間は1ずつ減算
             if self.attackTimer < 0:
                 self.isReady = False # タイマーが0未満になったら攻撃を終了
             return True

@@ -27,9 +27,9 @@ class Character(pg.sprite.Sprite):
         mv = 0
         # 左シフトを押すと加速
         if key_lst[pg.K_LSHIFT]:
-            self.dx = 20
+            self.dx = 30
         else:
-            self.dx = 10
+            self.dx = 15
         if key_lst[pg.K_LEFT]:
             mv = self.dx
         elif key_lst[pg.K_RIGHT]:

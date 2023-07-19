@@ -3,11 +3,10 @@ import random
 import pygame as pg
 import random
 import time
+import math
 
 import character as ch
 from background import background
-
-
 from Gakutyou import Gakutyou # 学長クラスのインポート
 
 WITDH = 1600
@@ -15,7 +14,7 @@ HEIGHT = 900
 STAGE_WIDTH = 10000  # ステージの横幅
 TREE_BOTTOM = 100
 WALL_NUM = 15  # 木の数
-trees = pg.sprite.Group() # 木のリスト
+screen = None
 
 class Wall(pg.sprite.Sprite):
     """
@@ -59,7 +58,7 @@ class Start_menu:
         フォント、メニュータイトルの表示
         """
         self.font = pg.font.Font("fonts/onryou.TTF", 100)
-        self.menu_title = self.font.render("学長から見つかるな！", True, (255, 255, 255))
+        self.menu_title = self.font.render("学長が転んだ", True, (255, 255, 255))
         
     def button(self, screen: pg.Surface, num:int):
         """
@@ -95,29 +94,32 @@ class Enemy(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = WITDH + 100, HEIGHT / 4
         self.vy = +40
-        self.ay = +1
+        self.ay = +1.0
         self.vx = -8
+        self.timer = 0
 
-
-    def update(self, mv_value):
+    def update(self, mv_value, timeDeray):
         """
         お魚が地面ではねるところ
         地面の座標(マージ前は750と仮定)に到達するまで等加速し、地面で速度を反転
         引数screen：画面Surface
         """
-        if self.rect.centery >= 750:
-            self.vy = -40
-        self.vy += self.ay
-        #self.rect.centerx = Character.calc_mv()   スクロールに合わせたx座標の移動(マージ後に調整)
-        self.rect.centerx += self.vx + mv_value
-        self.rect.centery += self.vy
+        # if self.rect.centery >= 750:
+        #     self.vy = -40 * timeDeray
+        # self.vy += self.ay * timeDeray
+        self.timer += self.vx * timeDeray
+        self.rect.centerx += self.vx * timeDeray + mv_value
+        self.rect.centery = -abs(math.sin(self.timer / 200 * (timeDeray*2))) * 700 + 800
         if self.rect.right <= 0:
-            self.kill()
+            self.kill() #画面外に出たら自身をkill
         
-
-def main():
+def displayInit():
+    global screen
     pg.display.set_caption("学長が転んだ")
     screen = pg.display.set_mode((WITDH, HEIGHT))
+
+def main():
+    global screen, recentTime
     # ここからメニュー画面
     start_menu = Start_menu()
     game_state = "menu_start"
@@ -126,7 +128,6 @@ def main():
         pg.display.update()
         key_lst = pg.key.get_pressed()
         for event in pg.event.get():
-             
             if (event.type == pg.KEYDOWN and event.key == pg.K_RIGHT):#右キーを押下で設定画面に移れる状態にする
                 start_menu.button(screen, 1)
                 game_state = "menu_end"
@@ -136,11 +137,8 @@ def main():
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE and game_state == "menu_start":
                 game_state = "runnnig"
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE and game_state == "menu_end":    
-                return
+                return "end"
         
-
-
-
     # ここからゲームスタート
     bg_image = pg.transform.rotozoom(pg.image.load("images/sky_img.png"), 0, 1.0)
 
@@ -148,10 +146,11 @@ def main():
     character = ch.Character([200, 720])
     bg = background()
     emys = pg.sprite.Group()
-
+    trees = pg.sprite.Group() # 木のグループ
 
     tmr = 0
     clock = pg.time.Clock()
+    clock.get_time()
     for i in range(WALL_NUM):  # WALL_NUMの分だけ繰り返す
         trees.add(Wall(screen))  # 木の情報を追加
 
@@ -160,15 +159,16 @@ def main():
             emys.add(Enemy())
         key_lst = pg.key.get_pressed()
         for event in pg.event.get():
-            if event.type == pg.QUIT: return
+            if event.type == pg.QUIT: 
+                return "end"
             
-
-        mv = character.calc_mv(key_lst, bg)
+        timeDeray = max(clock.tick(50), 100) / 100
+        mv = character.calc_mv(key_lst, bg) * timeDeray
         bg.update(-mv)
         screen.blit(bg.image,bg.rect)
 
-        gakutyou.update() # 学長インスタンスの更新
-        if gakutyou.get_isReady(): # 学長の攻撃中
+        gakutyou.update(timeDeray) # 学長インスタンスの更新
+        if gakutyou.get_isReady(timeDeray): # 学長の攻撃中
             shadeSurface = pg.Surface((WITDH, HEIGHT))
             shadeSurface.fill((0, 0, 0))
             shadeSurface.set_alpha(100)
@@ -186,20 +186,18 @@ def main():
             character.update(3, screen)            
             pg.display.update()
             time.sleep(2)
-            return
+            return "clear"
 
         screen.blit(character.image, character.rect) # キャラクター描画
         # キャラクターと障害物の衝突判定
         if len(pg.sprite.spritecollide(character, emys, True)) != 0:
-            character.update(2, screen)
-            pg.display.update()
-            time.sleep(2)
-            return
+            game_state = "game_over"
         else:
             character.update(1, screen)
         
-        emys.update(mv)
-        emys.draw(screen)
+        if len(emys) != 0:
+            emys.update(mv, timeDeray)
+            emys.draw(screen)
 
         # ゲームオーバー判定
         if game_state == "game_over":
@@ -208,19 +206,20 @@ def main():
             txt_rect = txt.get_rect()
             txt_rect.center = (WITDH / 2, HEIGHT / 2)
             screen.blit(txt, txt_rect)
+            character.update(2, screen)
             pg.display.update()
             time.sleep(2)
-            return
-
-        
-
+            return "damage"
         
         pg.display.update()
         tmr += 1
-        clock.tick(50)
+        
 
 if __name__ == "__main__":
     pg.init()
-    main()
+    displayInit()
+    status = "first"
+    while status != "end":
+        status = main()
     pg.quit()
     sys.exit()
