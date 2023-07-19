@@ -167,8 +167,8 @@ def main():
         bg.update(-mv)
         screen.blit(bg.image,bg.rect)
 
-        gakutyou.update() # 学長インスタンスの更新
-        if gakutyou.get_isReady(): # 学長の攻撃中
+        gakutyou.update(timeDeray) # 学長インスタンスの更新
+        if gakutyou.get_isReady(timeDeray): # 学長の攻撃中
             shadeSurface = pg.Surface((WITDH, HEIGHT))
             shadeSurface.fill((0, 0, 0))
             shadeSurface.set_alpha(100)
