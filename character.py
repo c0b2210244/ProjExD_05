@@ -18,15 +18,18 @@ class Character(pg.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.center = xy
         self.dx = 10
+        self.images: list[pg.Surface] = []
+        for i in range(1, 4):
+            self.images.append(pg.transform.flip(pg.transform.rotozoom(pg.image.load(f"images/character{i}.png"), 0, 0.5), True, False))
 
-    def calc_mv(self, key_lst: list[bool], bg: pg.sprite.Sprite):
+    def calc_mv(self, key_lst: list[bool], bg: pg.sprite.Sprite, hardMode):
         """
         押下キーに応じてキャラクターの移動量を返す関数
         引数１ key_lst：押下キーの真理値リスト
         """
         mv = 0
         # 左シフトを押すと加速
-        if key_lst[pg.K_LSHIFT]:
+        if key_lst[pg.K_LSHIFT] and not hardMode:
             self.dx = 30
         else:
             self.dx = 15
@@ -44,7 +47,7 @@ class Character(pg.sprite.Sprite):
         引数１ num：画像の番号
         引数２ screen：画面Surface
         """
-        self.image = pg.transform.flip(pg.transform.rotozoom(pg.image.load(f"images/character{num}.png"), 0, 0.5), True, False)
+        self.image = self.images[num-1]
         screen.blit(self.image, self.rect)
 
  
