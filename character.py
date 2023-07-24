@@ -41,7 +41,7 @@ class Character(pg.sprite.Sprite):
             mv = 0
         return mv
 
-    def update(self, num: int, screen: pg.Surface):
+    def update(self, num: int, screen: pg.Surface, isHardmode: bool):
         """
         障害物に当たった時に画像を切り替える
         引数１ num：画像の番号
@@ -49,5 +49,16 @@ class Character(pg.sprite.Sprite):
         """
         self.image = self.images[num-1]
         screen.blit(self.image, self.rect)
+        if num in (2, 3):
+            pg.mixer.init() # キャラクターの状態が2か3なら効果音を再生
+            seName = "sounds/"
+            if num == 2:
+                seName += "damage.mp3"
+            elif num == 3 and not isHardmode:
+                seName += "normalClear.mp3"
+            elif num == 3 and isHardmode:
+                seName += "hardClear.mp3"
+            pg.mixer.music.load(seName)
+            pg.mixer.music.play(1)
 
  

@@ -60,6 +60,8 @@ class Start_menu:
         """
         self.font = pg.font.Font("fonts/onryou.TTF", 100)
         self.menu_title = self.font.render("学長が転んだ", True, (255, 255, 255))
+        creditsFont = pg.font.Font("fonts/POP.ttf", 20)
+        self.menu_credit = creditsFont.render("効果音：OtoLogic - https://otologic.jp/", False, (255, 255, 255))
         
     def button(self, screen: pg.Surface, num:int):
         """
@@ -82,6 +84,7 @@ class Start_menu:
         
         screen.fill((0, 0, 0))
         screen.blit(self.menu_title, (WITDH/2 - self.menu_title.get_width()/2, HEIGHT/2 - self.menu_title.get_height()))
+        screen.blit(self.menu_credit, (WITDH - self.menu_credit.get_width() - 30, HEIGHT - self.menu_credit.get_height()))
         screen.blit(self.left_button, (WITDH/3 - self.left_button.get_width()/2, HEIGHT/2 + self.left_button.get_height()))
         screen.blit(self.right_button, (WITDH/3 * 2 - self.right_button.get_width()/2, HEIGHT/2 + self.right_button.get_height()))
 
@@ -98,14 +101,13 @@ class Enemy(pg.sprite.Sprite):
         self.rect.center = WITDH + 100, HEIGHT / 4
         self.vy = +40
         self.ay = +1.0
-        self.vx = -8 + hardMode * -8
+        self.vx = -4 + hardMode * -8
         self.radian = 0
         self.randomJump = random.randint(100, 200)
 
     def update(self, mv_value):
         """
         お魚が地面ではねるところ
-        地面の座標(マージ前は750と仮定)に到達するまで等加速し、地面で速度を反転
         引数screen：画面Surface
         """
         self.radian += self.vx * self.randomJump / 100
@@ -119,7 +121,7 @@ def displayInit():
     screen = pg.display.set_mode((WITDH, HEIGHT))
 
 def main():
-    global screen, recentTime
+    global screen
     # ここからメニュー画面
     start_menu = Start_menu()
     game_state = "menu_start"
@@ -139,30 +141,30 @@ def main():
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE and game_state == "menu_end":    
                 return "end"
     # 難易度選択
-    hardMode = False
+    isHardmode = False
     game_state = "menu_normal"
     start_menu.button(screen, 2)
     while game_state != "running":
         pg.display.update()
         key_lst = pg.key.get_pressed()
         for event in pg.event.get():
-            if (event.type == pg.KEYDOWN and event.key == pg.K_RIGHT):#右キーを押下でふつう画面に移れる状態にする
+            if event.type == pg.KEYDOWN and event.key == pg.K_RIGHT:#右キーを押下でふつう画面に移れる状態にする
                 start_menu.button(screen, 3)
                 game_state = "menu_hard"
-            if(event.type == pg.KEYDOWN and event.key == pg.K_LEFT):#左キーを押下でむずかしい画面に移れる状態にする
+            if event.type == pg.KEYDOWN and event.key == pg.K_LEFT:#左キーを押下でむずかしい画面に移れる状態にする
                 start_menu.button(screen, 2)
                 game_state = "menu_normal"
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE and game_state == "menu_normal":
                 game_state = "running"
-                hardMode = False
+                isHardmode = False
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE and game_state == "menu_hard":    
                 game_state = "running"
-                hardMode = True
+                isHardmode = True
         
     # ここからゲームスタート
     bg_image = pg.transform.rotozoom(pg.image.load("images/sky_img.png"), 0, 1.0)
 
-    gakutyou = Gakutyou((1000, 200), 1, hardMode) # 学長インスタンスを作成
+    gakutyou = Gakutyou((1000, 200), 1, isHardmode) # 学長インスタンスを作成
     character = ch.Character([200, 720])
     bg = background()
     emy: Enemy = None
@@ -171,18 +173,18 @@ def main():
     tmr = 0
     clock = pg.time.Clock()
     clock.get_time()
-    for i in range(WALL_NUM + hardMode * -4):  # WALL_NUMの分だけ繰り返す
+    for i in range(WALL_NUM + isHardmode * -4):  # WALL_NUMの分だけ繰り返す
         trees.add(Wall(screen))  # 木の情報を追加
 
     while True:
         if emy is None:
-            emy = Enemy(hardMode)
+            emy = Enemy(isHardmode)
         key_lst = pg.key.get_pressed()
         for event in pg.event.get():
             if event.type == pg.QUIT: 
                 return "end"
             
-        mv = character.calc_mv(key_lst, bg, hardMode)
+        mv = character.calc_mv(key_lst, bg, isHardmode)
         bg.update(-mv)
         screen.blit(bg.image,bg.rect)
 
@@ -228,7 +230,7 @@ def main():
             txt_rect = txt.get_rect()
             txt_rect.center = (WITDH / 2, HEIGHT / 2)
             screen.blit(txt, txt_rect)
-            character.update(2, screen)
+            character.update(2, screen, isHardmode)
             pg.display.update()
             time.sleep(2)
             return "damage"
