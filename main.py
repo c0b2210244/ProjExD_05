@@ -11,26 +11,26 @@ from Gakutyou import Gakutyou # 学長クラスのインポート
 
 WITDH = 1600
 HEIGHT = 900
-STAGE_WIDTH = 8500  # ステージの横幅
+STAGE_WIDTH = 7000  # ステージの横幅
 TREE_BOTTOM = 47
-WALL_NUM = 15  # 木の数
-screen = None
+WALL_NUM = 10  # 木の数
+screen: pg.Surface = None
 
 class Wall(pg.sprite.Sprite):
     """
     遮蔽物(以下、木)の描画、判定処理
     """
-    def __init__(self, screen: pg.Surface):
+    def __init__(self, screen: pg.Surface, number):
         """
         遮蔽物(木)を描画
         引数: screen: 画面Surface
         """
         super().__init__()
         self.image = pg.transform.rotozoom(pg.image.load("images/tree.png"), 0, 0.5)  # 木の画像を読み込む
-        screen.blit(self.image, [WITDH, HEIGHT - 350])  # 木を表示
         self.rect = self.image.get_rect()  # 木のrectを作成
         self.rect.bottom = HEIGHT - TREE_BOTTOM  # 木のY座標を固定
-        self.rect.centerx = random.randint(500, STAGE_WIDTH)  # 木のX座標を決定。500～ステージのサイズの間にランダムで生成
+        treeExistWidth = STAGE_WIDTH // WALL_NUM
+        self.rect.centerx = random.randint(treeExistWidth * number, treeExistWidth * (number + 2)) # 木のX座標を決定。一定間隔の間にランダムで生成
     
     def update(self, screen: pg.Surface, mv):
         """
@@ -91,12 +91,13 @@ class Start_menu:
 
 class Enemy(pg.sprite.Sprite):
     """
-    道中の障害物(おさかなさん)に関するクラス
+    道中の障害物(おさかなさん等)に関するクラス
     """
 
-    def __init__(self, hardMode: bool):
+    def __init__(self, hardMode: bool, bg: pg.sprite.Sprite):
         super().__init__()
-        self.image = pg.transform.rotozoom(pg.image.load("images/ojama.png"), 0, 0.3)   # 障害物の画像読み込み
+        pict= pg.image.load(random.choice(("images/ojama.png",) + ("images/frogFSM.png",) * (hardMode * (bg.rect.left < -3000)))) # 敵キャラの抽選
+        self.image = pg.transform.rotozoom(pict, 0, 80000 / (pict.get_width() * pict.get_height()))   # 障害物の画像読み込み
         self.rect = self.image.get_rect()
         self.rect.center = WITDH + 100, HEIGHT / 4
         self.vy = +40
@@ -112,7 +113,7 @@ class Enemy(pg.sprite.Sprite):
         """
         self.radian += self.vx * self.randomJump / 100
         self.rect.centerx += self.vx + mv_value
-        self.rect.centery = -abs(math.sin(self.radian / self.randomJump)) * 700 + 800
+        self.rect.bottom = -abs(math.sin(self.radian / self.randomJump)) * (870 - self.image.get_height()) + 870
         
         
 def displayInit():
@@ -136,9 +137,9 @@ def main():
             if(event.type == pg.KEYDOWN and event.key == pg.K_LEFT):#左キーを押下でゲーム画面に移れる状態にする
                 start_menu.button(screen, 0)
                 game_state = "menu_start"
-            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE and game_state == "menu_start":
+            if event.type == pg.KEYDOWN and event.key in (pg.K_SPACE, pg.K_ESCAPE, pg.K_DOWN) and game_state == "menu_start":
                 game_state = "choiceDifficulty"
-            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE and game_state == "menu_end":    
+            if event.type == pg.KEYDOWN and event.key in (pg.K_SPACE, pg.K_ESCAPE, pg.K_DOWN) and game_state == "menu_end":    
                 return "end"
     # 難易度選択
     isHardmode = False
@@ -154,18 +155,16 @@ def main():
             if event.type == pg.KEYDOWN and event.key == pg.K_LEFT:#左キーを押下でむずかしい画面に移れる状態にする
                 start_menu.button(screen, 2)
                 game_state = "menu_normal"
-            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE and game_state == "menu_normal":
+            if event.type == pg.KEYDOWN and event.key in (pg.K_SPACE, pg.K_ESCAPE, pg.K_DOWN) and game_state == "menu_normal":
                 game_state = "running"
                 isHardmode = False
-            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE and game_state == "menu_hard":    
+            if event.type == pg.KEYDOWN and event.key in (pg.K_SPACE, pg.K_ESCAPE, pg.K_DOWN) and game_state == "menu_hard":    
                 game_state = "running"
                 isHardmode = True
         
     # ここからゲームスタート
-    bg_image = pg.transform.rotozoom(pg.image.load("images/sky_img.png"), 0, 1.0)
-
     gakutyou = Gakutyou((1000, 200), 1, isHardmode) # 学長インスタンスを作成
-    character = ch.Character([200, 720])
+    character = ch.Character([200, 704])
     bg = background()
     emy: Enemy = None
     trees = pg.sprite.Group() # 木のグループ
@@ -173,21 +172,19 @@ def main():
     tmr = 0
     clock = pg.time.Clock()
     clock.get_time()
-    for i in range(WALL_NUM + isHardmode * -4):  # WALL_NUMの分だけ繰り返す
-        trees.add(Wall(screen))  # 木の情報を追加
+    for i in range(WALL_NUM):  # WALL_NUMの分だけ繰り返す
+        trees.add(Wall(screen, i))  # 木の情報を追加
 
     while True:
         if emy is None:
-            emy = Enemy(isHardmode)
+            emy = Enemy(isHardmode, bg)
         key_lst = pg.key.get_pressed()
         for event in pg.event.get():
             if event.type == pg.QUIT: 
                 return "end"
-            
         mv = character.calc_mv(key_lst, bg, isHardmode)
         bg.update(-mv)
         screen.blit(bg.image,bg.rect)
-
         gakutyou.update() # 学長インスタンスの更新
         if gakutyou.get_isReady(): # 学長の攻撃中
             shadeSurface = pg.Surface((WITDH, HEIGHT))
@@ -203,19 +200,18 @@ def main():
 
         # クリア
         if bg.rect.x <= -6800:
-            character.update(3, screen)            
+            character.update(3, screen, isHardmode)   
+            screen.blit(character.image, character.rect) # キャラクター描画        
             pg.display.update()
             time.sleep(2)
             return "clear"
 
-        screen.blit(character.image, character.rect) # キャラクター描画
+        
         # キャラクターと障害物の衝突判定
-        if math.sqrt(abs(character.rect.centerx - emy.rect.centerx)**2
-                     + abs(character.rect.centery - emy.rect.centery)**2) <= 210:
+        if math.sqrt((character.rect.centerx - emy.rect.centerx)**2
+                     + (character.rect.centery - emy.rect.bottom)**2) <= 170 \
+                     and (character.rect.centerx - emy.rect.centerx) < 100: # 当たり判定の調節
             game_state = "game_over"
-        else:
-            pass
-            # character.update(1, screen)
         
         if emy is not None:
             emy.update(mv)
@@ -231,10 +227,11 @@ def main():
             txt_rect.center = (WITDH / 2, HEIGHT / 2)
             screen.blit(txt, txt_rect)
             character.update(2, screen, isHardmode)
+            screen.blit(character.image, character.rect)
             pg.display.update()
             time.sleep(2)
             return "damage"
-        
+        screen.blit(character.image, character.rect) # キャラクター描画
         clock.tick(50)
         pg.display.update()
         tmr += 1
@@ -246,5 +243,7 @@ if __name__ == "__main__":
     status = "first"
     while status != "end":
         status = main()
+        if status != "clear":
+            pg.mixer.music.stop()
     pg.quit()
     sys.exit()
