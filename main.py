@@ -124,6 +124,9 @@ def displayInit():
 def main():
     global screen
     # ここからメニュー画面
+    pg.mixer.init(channels=10)
+    pg.mixer.music.load("sounds/menuBGM.wav")
+    pg.mixer.music.play(-1)
     start_menu = Start_menu()
     game_state = "menu_start"
     start_menu.button(screen, 0)
@@ -161,7 +164,7 @@ def main():
             if event.type == pg.KEYDOWN and event.key in (pg.K_SPACE, pg.K_ESCAPE, pg.K_DOWN) and game_state == "menu_hard":    
                 game_state = "running"
                 isHardmode = True
-        
+    pg.mixer.music.stop()
     # ここからゲームスタート
     gakutyou = Gakutyou((1000, 200), 1, isHardmode) # 学長インスタンスを作成
     character = ch.Character([200, 704])
@@ -175,6 +178,8 @@ def main():
     for i in range(WALL_NUM):  # WALL_NUMの分だけ繰り返す
         trees.add(Wall(screen, i))  # 木の情報を追加
 
+    mixer1 = pg.mixer.Channel(2)
+    mixer1.play(pg.mixer.Sound(f"sounds/ingameBGM{'fast' * isHardmode}.wav"), -1)
     while True:
         if emy is None:
             emy = Enemy(isHardmode, bg)
@@ -187,6 +192,7 @@ def main():
         screen.blit(bg.image,bg.rect)
         gakutyou.update() # 学長インスタンスの更新
         if gakutyou.get_isReady(): # 学長の攻撃中
+            mixer1.pause()
             shadeSurface = pg.Surface((WITDH, HEIGHT))
             shadeSurface.fill((0, 0, 0))
             shadeSurface.set_alpha(100)
@@ -194,6 +200,8 @@ def main():
             # 隠れられているか判定
             if len(pg.sprite.spritecollide(character, trees, False)) == 0:
                 game_state = "game_over"
+        else:
+            mixer1.unpause()
         screen.blit(gakutyou.image, gakutyou.rect) # 学長インスタンスを描画
         trees.update(screen, mv)  # 木の位置を更新する
         trees.draw(screen)
@@ -243,7 +251,6 @@ if __name__ == "__main__":
     status = "first"
     while status != "end":
         status = main()
-        if status != "clear":
-            pg.mixer.music.stop()
+        pg.mixer.stop()
     pg.quit()
     sys.exit()

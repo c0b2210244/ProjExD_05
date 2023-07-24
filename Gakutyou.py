@@ -45,6 +45,7 @@ class Gakutyou(pg.sprite.Sprite):
         self.attackTimer = -1 # 攻撃時間を設定（攻撃時以外は-1）
         self.isReady = False # 攻撃中かどうか
         self.coolTime = Gakutyou.COOL_TIME_BASE + hardMode * -120
+        self.channel = pg.mixer.Channel(1)
 
     def update(self):
         """
@@ -60,9 +61,7 @@ class Gakutyou(pg.sprite.Sprite):
             self.timer += 1
             self.image = self.images[int(self.timer * ((self.timer // 120 + 1) ** 2)) % 120] # タイマーに応じて画像を変更
             if int(self.timer * ((self.timer // 120 + 1) ** 2)) % 120 <= 10:
-                pg.mixer.init() # 目が光る効果音を再生
-                pg.mixer.music.load("sounds/pika.mp3")
-                pg.mixer.music.play(1)
+                self.channel.play(pg.mixer.Sound("sounds/pika.mp3"))
         
     def get_isReady(self):
         """

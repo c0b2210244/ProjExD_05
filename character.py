@@ -21,6 +21,7 @@ class Character(pg.sprite.Sprite):
         self.images: list[pg.Surface] = []
         for i in range(1, 4):
             self.images.append(pg.transform.flip(pg.transform.rotozoom(pg.image.load(f"images/character{i}.png"), 0, 0.5), True, False))
+        self.channel = pg.mixer.Channel(3)
 
     def calc_mv(self, key_lst: list[bool], bg: pg.sprite.Sprite, hardMode):
         """
@@ -49,16 +50,19 @@ class Character(pg.sprite.Sprite):
         """
         self.image = self.images[num-1]
         if num in (2, 3):
-            pg.mixer.init() # キャラクターの状態が2か3なら効果音を再生
+            # キャラクターの状態が2か3なら効果音を再生
+            pg.mixer.Channel(2).stop()
             seName = "sounds/"
             if num == 2:
                 seName += "damage.mp3"
                 self.rect.move_ip((self.images[0].get_width() - self.images[1].get_width()), 0)
+                self.channel.play(pg.mixer.Sound(seName), maxtime=1000)
+                return
             elif num == 3 and not isHardmode:
                 seName += "normalClear.mp3"
             elif num == 3 and isHardmode:
                 seName += "hardClear.mp3"
-            pg.mixer.music.load(seName)
-            pg.mixer.music.play()
+            self.channel.play(pg.mixer.Sound(seName))
+            
 
  
